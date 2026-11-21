@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="账单系统V4.6">
+<meta name="apple-mobile-web-app-title" content="账单系统V4.5">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0f766e">
 <link rel="manifest" href="manifest.json">
@@ -371,15 +371,13 @@
     .footer { margin-top: 5px !important; padding-top: 4px !important; }
   }
 </style>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
 </head>
 <body>
 
 <div class="sidebar" id="sidebarPanel">
   <div class="sb-head">
-    <h2>八国账单与 V4.6 编号校验系统</h2>
-    <span class="badge-v">V4.6 纯净PDF直出版</span>
+    <h2>八国账单与 V4.5 编号校验系统</h2>
+    <span class="badge-v">V4.5 矢量打印版</span>
   </div>
 
   <div class="sec-div">
@@ -497,7 +495,7 @@
     <ul class="qa-list" id="qaList"></ul>
   </div>
 
-  <button class="btn btn-print" id="btnPrint" onclick="directCleanPDF()">直接下载纯净单页 PDF (无网址/无时间)</button>
+  <button class="btn btn-print" id="btnPrint" onclick="window.print()">导出单页矢量 PDF (无水印)</button>
 </div>
 
 <!-- 右侧无水印 A4 画布 -->
@@ -1459,7 +1457,7 @@ function renderAll() {
 
   const btnP = document.getElementById("btnPrint");
   btnP.disabled = !qa.passed;
-  btnP.textContent = qa.passed ? "直接下载纯净单页 PDF (无网址/无时间)" : "编号校验存在 Error，请修正后导出";
+  btnP.textContent = qa.passed ? "导出单页矢量 PDF (无水印)" : "编号校验存在 Error，请修正后导出";
 
   // 同步手机端预览顶部状态条
   const mpbQa = document.getElementById("mpbQa");
@@ -1579,87 +1577,6 @@ function mobileRandomize() {
   }
 }
 
-async function directCleanPDF() {
-  const btnP = document.getElementById("btnPrint");
-  if (btnP && btnP.disabled) {
-    if (window.innerWidth <= 960) switchMobileTab("edit");
-    showToast("编号校验存在 Error，请先修正");
-    return;
-  }
-
-  // 检查直出引擎是否加载完成
-  if (typeof window.html2canvas !== "function" || !window.jspdf || !window.jspdf.jsPDF) {
-    showToast("PDF 引擎加载中，请稍候 2 秒重试");
-    return;
-  }
-
-  const origText = btnP ? btnP.textContent : "";
-  if (btnP) { btnP.disabled = true; btnP.textContent = "正在生成纯净单页 PDF..."; }
-  showToast("正在生成无网址纯净单页 PDF...");
-
-  try {
-    const srcEl = document.getElementById("a4Canvas");
-    // 克隆一份到屏幕外固定 794px (标准 A4 宽) 渲染，不受手机缩放或隐藏影响
-    const stage = document.createElement("div");
-    stage.style.cssText = "position:fixed;left:-9999px;top:0;width:794px;background:#ffffff;z-index:-1;";
-    const clone = srcEl.cloneNode(true);
-    clone.style.transform = "none";
-    clone.style.width = "794px";
-    clone.style.minHeight = "1123px";
-    clone.style.height = "auto";
-    clone.style.boxShadow = "none";
-    clone.style.margin = "0";
-    stage.appendChild(clone);
-    document.body.appendChild(stage);
-
-    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
-
-    const canvas = await window.html2canvas(clone, {
-      scale: 2.5,
-      useCORS: true,
-      backgroundColor: "#ffffff",
-      width: 794,
-      windowWidth: 794,
-      logging: false
-    });
-
-    document.body.removeChild(stage);
-
-    const imgData = canvas.toDataURL("image/jpeg", 0.96);
-    const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4", compress: true });
-
-    const pageW = 210;
-    const pageH = 297;
-    const imgW = pageW;
-    const imgH = (canvas.height * pageW) / canvas.width;
-
-    // 严格锁定单页 A4：若内容略高则按比例微缩居中，绝不产生空白第二页
-    if (imgH <= pageH) {
-      pdf.addImage(imgData, "JPEG", 0, 0, imgW, imgH, undefined, "FAST");
-    } else {
-      const ratio = pageH / imgH;
-      const fitW = imgW * ratio;
-      const offsetX = (pageW - fitW) / 2;
-      pdf.addImage(imgData, "JPEG", offsetX, 0, fitW, pageH, undefined, "FAST");
-    }
-
-    const invNo = (document.getElementById("inInv").value || "Statement").replace(/[^A-Za-z0-9\-_]/g, "");
-    const cc = document.getElementById("selCountry").value || "BILL";
-    pdf.save(`${cc}_${invNo}.pdf`);
-    showToast("纯净单页 PDF 已保存！");
-  } catch (err) {
-    console.error(err);
-    showToast("直出失败，已切换系统打印");
-    window.print();
-  } finally {
-    if (btnP) {
-      btnP.disabled = false;
-      btnP.textContent = origText || "直接下载纯净单页 PDF";
-    }
-  }
-}
-
 function mobileExportPDF() {
   const btnP = document.getElementById("btnPrint");
   if (btnP && btnP.disabled) {
@@ -1670,7 +1587,7 @@ function mobileExportPDF() {
     }, 100);
     return;
   }
-  directCleanPDF();
+  window.print();
 }
 
 window.addEventListener("resize", () => {
